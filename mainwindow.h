@@ -21,8 +21,11 @@ public:
     ~MainWindow();
 
 private:
-    void buildServerClient(const QString& server, Options opt);
+    void buildServerClient(const QString& server,
+                           const QString& dns,
+                           Options opt);
     void loadOptions();
+    void writeOptions(const QString&, const QString&, Options);
 
 private:
     Ui::MainWindow* ui;

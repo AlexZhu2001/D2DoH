@@ -1,11 +1,14 @@
 #include "dnsserver.h"
 #include "Logger.h"
 #include <QDateTime>
+#include <QDnsLookup>
 #include <QNetworkDatagram>
+
 DnsServer::DnsServer(QObject* parent, Options opt)
     : QObject{ parent }
     , socket{ new QUdpSocket{ this } }
     , socketv6{ new QUdpSocket{ this } }
+    , backupSocket{ new QUdpSocket{ this } }
 {
     if (opt & OnlyIpv4) {
         socket->bind(QHostAddress::LocalHost, 53, QUdpSocket::ReuseAddressHint);
@@ -16,6 +19,34 @@ DnsServer::DnsServer(QObject* parent, Options opt)
             QHostAddress::LocalHostIPv6, 53, QUdpSocket::ReuseAddressHint);
         connect(socketv6, &QUdpSocket::readyRead, this, &DnsServer::onDnsQuery);
     }
+    backupSocket->bind(QHostAddress::Any, 40000);
+    connect(backupSocket, &QUdpSocket::readyRead, this, [this]() {
+        while (backupSocket->hasPendingDatagrams()) {
+            QNetworkDatagram datagram = backupSocket->receiveDatagram();
+            auto data = datagram.data();
+            if (data.isEmpty())
+                return;
+            quint16 id = data.at(0);
+            id <<= 8;
+            id = id + data.at(1);
+            this->doDnsAnswer(id, data);
+            Logger::log(
+                "DnsServer",
+                QString("\n\tBackup DNS server reply!\n\tID:%1").arg(id));
+        }
+    });
+}
+
+const QString&
+DnsServer::getBackupDns() const
+{
+    return backupDns;
+}
+
+void
+DnsServer::setBackupDns(const QString& newBackupDns)
+{
+    backupDns = newBackupDns;
 }
 
 void
@@ -25,6 +56,8 @@ DnsServer::onDnsQuery()
     while (socket->hasPendingDatagrams()) {
         QNetworkDatagram datagram = socket->receiveDatagram();
         auto data = datagram.data();
+        if (data.isEmpty())
+            return;
         quint16 id = data.at(0);
         id <<= 8;
         id = id + data.at(1);
@@ -64,8 +97,10 @@ DnsServer::doDnsAnswer(quint16 id, const QByteArray& ans)
 }
 
 void
-DnsServer::doErrorReply(quint16 id)
+DnsServer::doErrorReply(const QByteArray& query)
 {
-    Logger::log("DnsServer", "Error!!!DoH error occurred, Do nothing!!!");
-    dnsMap.remove(id);
+    Logger::log("DnsServer",
+                "Error!!!DoH error occurred, Using Backup DNS Server!!!");
+    backupSocket->writeDatagram(query, QHostAddress(backupDns), 53);
+    backupSocket->flush();
 }

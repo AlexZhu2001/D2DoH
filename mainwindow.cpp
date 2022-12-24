@@ -28,6 +28,7 @@ MainWindow::MainWindow(QWidget* parent)
     icon->setIcon(iconPic);
     icon->setContextMenu(menu);
     icon->show();
+    loadOptions();
     connect(actOptions, &QAction::triggered, this, [this]() {
         loadOptions();
         this->show();
@@ -37,6 +38,7 @@ MainWindow::MainWindow(QWidget* parent)
         static QRegularExpression exp(
             "https://([-a-zA-Z0-9]*\\.)*([a-zA-Z0-9])*/[-a-zA-Z0-9/]*");
         auto url = ui->edtAddr->text();
+        auto dns = ui->edtDnsAddr->text();
         auto v4 = ui->chkEnV4->isChecked();
         auto v6 = ui->chkEnV6->isChecked();
         if (!exp.match(url).hasMatch()) {
@@ -56,15 +58,7 @@ MainWindow::MainWindow(QWidget* parent)
             } else {
                 opt = OnlyIpv4;
             }
-            QFile f(OPTION_FILE);
-            f.open(QFile::WriteOnly | QFile::Truncate);
-            QJsonDocument doc;
-            QJsonObject obj;
-            obj.insert("server", url);
-            obj.insert("server-options", (int)opt);
-            doc.setObject(obj);
-            f.write(doc.toJson());
-            f.close();
+            writeOptions(url, dns, opt);
             loadOptions();
             this->close();
         }
@@ -77,7 +71,9 @@ MainWindow::~MainWindow()
 }
 
 void
-MainWindow::buildServerClient(const QString& server, Options opt)
+MainWindow::buildServerClient(const QString& server,
+                              const QString& dns,
+                              Options opt)
 {
     if (this->server != nullptr) {
         delete this->server;
@@ -88,12 +84,17 @@ MainWindow::buildServerClient(const QString& server, Options opt)
     this->server = new DnsServer(this, opt);
     this->client = new DoHClient(this);
     client->setDohServer(server);
+    this->server->setBackupDns(dns);
     connect(
-        this->server, &DnsServer::DnsReceived, client, &DoHClient::doDotQuery);
+        this->server, &DnsServer::DnsReceived, client, &DoHClient::doDoHQuery);
     connect(client,
             &DoHClient::onDotFinished,
             this->server,
             &DnsServer::doDnsAnswer);
+    connect(client,
+            &DoHClient::errorOccurred,
+            this->server,
+            &DnsServer::doErrorReply);
 }
 
 void
@@ -101,21 +102,18 @@ MainWindow::loadOptions()
 {
     QFile f(OPTION_FILE);
     if (!f.exists()) {
-        QJsonDocument doc;
-        QJsonObject obj;
-        obj.insert("server", "https://dns.alidns.com/dns-query");
-        obj.insert("server-options", (int)Options::v4Andv6);
-        f.open(QFile::WriteOnly | QFile::Truncate);
-        doc.setObject(obj);
-        f.write(doc.toJson());
-        f.close();
+        writeOptions(
+            "https://dns.alidns.com/dns-query", "223.5.5.5", Options::v4Andv6);
     }
     f.open(QFile::ReadOnly);
     auto doc = QJsonDocument::fromJson(f.readAll());
     f.close();
     auto server = doc["server"].toString();
+    auto dns = doc["backdns"].toString();
     auto opt = doc["server-options"].toInt();
+
     this->ui->edtAddr->setText(server);
+    this->ui->edtDnsAddr->setText(dns);
     if (opt & Options::OnlyIpv4) {
         this->ui->chkEnV4->setChecked(true);
     } else {
@@ -126,5 +124,20 @@ MainWindow::loadOptions()
     } else {
         this->ui->chkEnV6->setChecked(false);
     }
-    buildServerClient(server, (Options)opt);
+    buildServerClient(server, dns, (Options)opt);
+}
+
+void
+MainWindow::writeOptions(const QString& url, const QString& dns, Options opt)
+{
+    QFile f(OPTION_FILE);
+    f.open(QFile::WriteOnly | QFile::Truncate);
+    QJsonDocument doc;
+    QJsonObject obj;
+    obj.insert("server", url);
+    obj.insert("backdns", dns);
+    obj.insert("server-options", (int)opt);
+    doc.setObject(obj);
+    f.write(doc.toJson());
+    f.close();
 }

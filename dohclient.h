@@ -17,18 +17,18 @@ public:
 private:
     QNetworkAccessManager* man;
     QString dohServer = "https://dns.alidns.com/dns-query";
-    QMap<QNetworkReply*, quint16> idReg;
+    QMap<QNetworkReply*, QByteArray> idReg;
 
 public slots:
-    void doDotQuery(quint16 id, const QByteArray& query);
+    void doDoHQuery(quint16 id, const QByteArray& query);
 
 private slots:
-    void onDotResponse();
-    void onErrorOccurred(QNetworkReply::NetworkError code);
+    void onDoHResponse();
+    void onErrorOccurred(int code);
 
 signals:
     void onDotFinished(quint16 id, const QByteArray& ans);
-    void errorOccurred(quint16 id);
+    void errorOccurred(const QByteArray& query);
 };
 
 #endif // DOHCLIENT_H

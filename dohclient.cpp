@@ -21,22 +21,28 @@ DoHClient::setDohServer(const QString& newDohServer)
 }
 
 void
-DoHClient::doDotQuery(quint16 id, const QByteArray& query)
+DoHClient::doDoHQuery(quint16 id, const QByteArray& query)
 {
+    Q_UNUSED(id);
     QNetworkRequest req;
     req.setUrl(QUrl(dohServer));
     req.setHeader(QNetworkRequest::ContentTypeHeader,
                   "application/dns-message");
     auto rep = man->post(req, query);
-    connect(rep, &QNetworkReply::finished, this, &DoHClient::onDotResponse);
-    idReg.insert(rep, id);
+    connect(rep, &QNetworkReply::finished, this, &DoHClient::onDoHResponse);
+    idReg.insert(rep, query);
 }
 
 void
-DoHClient::onDotResponse()
+DoHClient::onDoHResponse()
 {
     auto rep = static_cast<QNetworkReply*>(sender());
-    if (rep->error() != QNetworkReply::NoError) {
+    auto code =
+        rep->attribute(QNetworkRequest::HttpStatusCodeAttribute).toString();
+    if (rep->error() != QNetworkReply::NoError || code != "200") {
+        Logger::log("DoHClient",
+                    QString("\n\tDoH Answer Error\n\tCode:%1").arg(code));
+        this->onErrorOccurred(code.toInt());
         rep->deleteLater();
         return;
     }
@@ -52,7 +58,7 @@ DoHClient::onDotResponse()
 }
 
 void
-DoHClient::onErrorOccurred(QNetworkReply::NetworkError code)
+DoHClient::onErrorOccurred(int code)
 {
     Logger::log("DoHClient",
                 QString("\n\tDoH Error Occurred!!!\n\tErrMsg:%1").arg(code));
