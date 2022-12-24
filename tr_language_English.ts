@@ -9,22 +9,27 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="mainwindow.ui" line="44"/>
+        <location filename="mainwindow.ui" line="42"/>
         <source>DoH Server Address</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="mainwindow.ui" line="55"/>
+        <location filename="mainwindow.ui" line="49"/>
+        <source>Backup DNS Server</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="mainwindow.ui" line="58"/>
         <source>Enable IPv4</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="mainwindow.ui" line="62"/>
+        <location filename="mainwindow.ui" line="65"/>
         <source>Enable IPv6</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="mainwindow.ui" line="86"/>
+        <location filename="mainwindow.ui" line="89"/>
         <source>Save</source>
         <translation type="unfinished"></translation>
     </message>
@@ -44,18 +49,18 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="41"/>
         <location filename="mainwindow.cpp" line="45"/>
+        <location filename="mainwindow.cpp" line="49"/>
         <source>Error</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="41"/>
+        <location filename="mainwindow.cpp" line="45"/>
         <source>Server is invalid</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="46"/>
+        <location filename="mainwindow.cpp" line="50"/>
         <source>You should enable at least one options</source>
         <translation type="unfinished"></translation>
     </message>
